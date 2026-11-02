@@ -1,0 +1,12 @@
+# 機密：絕對不要 commit
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+cert/
+# 執行時產生
+flow.db
+flow.db-*
+__pycache__/
+*.pyc
