@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: optboard
+    runtime: python
+    plan: starter            # free 方案閒置會休眠，登入與力道累積會中斷，不建議
+    buildCommand: pip install -r requirements.txt
+    # 只能 1 個 worker：登入狀態與力道累積都在記憶體裡
+    startCommand: gunicorn -w 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9        # 請改成和富邦 SDK wheel 相符的版本
+      - key: ACCESS_PASSWORD
+        sync: false          # 在 Render 後台填，不寫進程式碼
+      - key: DB_PATH
+        value: /var/data/flow.db
+      # 要伺服器自動登入才需要下面幾個（都在後台填，sync:false）：
+      - key: FUBON_ID
+        sync: false
+      - key: FUBON_PWD
+        sync: false
+      - key: FUBON_CERT_B64
+        sync: false
+      - key: FUBON_CERT_PWD
+        sync: false
+      - key: ENV_AUTO_LOGIN
+        value: "0"
+    disk:                    # 力道資料庫要保存，必須掛 Disk（付費方案才有）
+      name: optboard-data
+      mountPath: /var/data
+      sizeGB: 1
