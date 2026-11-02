@@ -1,0 +1,7 @@
+flask
+python-dotenv
+gunicorn
+# ---- 富邦新一代 API SDK（fubon_neo）----
+# 官方 SDK 是各平台的 .whl 檔，不是一般 PyPI 套件。把「Linux x86_64」版放進 vendor/，
+# 然後把下面這行的檔名改成你實際放的檔名（保留開頭的 ./ ），並刪掉行首的 #：
+# ./vendor/fubon_neo-2.2.8-xxxxxxxx-manylinux_xxxxx_x86_64.whl
