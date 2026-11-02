@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>富邦 API 選擇權看板</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg-dark:#0d0e12;--panel-bg:#131722;--panel-border:#2a2e39;--card-inner-bg:#1e222d;--accent-gold:#f0b90b;--green-up:#00c076;--red-down:#f6465d;--text-primary:#e0e3eb;--text-secondary:#848e9c;--font-mono:'JetBrains Mono',monospace;--font-main:'Noto Sans TC',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{background:var(--bg-dark);color:var(--text-primary);font-family:var(--font-main);font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%;max-width:100vw;touch-action:pan-y;padding:clamp(6px,1vw,10px);min-height:100vh}
+.container{width:100%;margin:0 auto;display:flex;flex-direction:column;gap:clamp(6px,1vw,10px)}
+
+/* Top bar */
+.top-bar{background:#08090c;border:1px solid var(--panel-border);border-radius:4px;padding:8px clamp(10px,1.2vw,16px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.top-bar-left{display:flex;align-items:center;gap:clamp(8px,1.2vw,14px);flex-wrap:wrap}
+.brand-logo{font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:4px;letter-spacing:-.5px}
+.brand-subtitle{font-size:.82rem;color:var(--text-secondary);font-weight:400;margin-left:2px}
+.badge-real{background:rgba(0,192,118,.15);color:var(--green-up);border:1px solid rgba(0,192,118,.3);border-radius:8px;padding:2px 8px;font-size:.78rem;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.badge-real.bad{background:rgba(246,70,93,.15);color:var(--red-down);border-color:rgba(246,70,93,.3)}
+.status-dot-text{color:var(--text-secondary);font-size:.82rem;display:flex;align-items:center;gap:5px}
+.status-dot-yellow{width:7px;height:7px;background:var(--accent-gold);border-radius:50%;display:inline-block;box-shadow:0 0 5px rgba(240,185,11,.6)}
+
+/* Market strip */
+.market-strip-grid{display:flex;flex-wrap:nowrap;gap:clamp(6px,1vw,10px);width:100%}
+.market-card{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:4px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}
+.market-card.fut{cursor:pointer}.market-card.fut:hover{border-color:var(--accent-gold)}
+.market-card-title{color:var(--accent-gold);font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.market-card-title small{color:var(--text-secondary);font-weight:400;font-size:.7rem;margin-left:4px}
+.market-card-body{display:flex;justify-content:space-between;align-items:center;gap:4px;min-width:0}
+.market-card-left{display:flex;align-items:center;flex-shrink:0}
+.mini-candle{width:14px;height:28px;position:relative}
+.candle-wick{position:absolute;width:1.5px;top:1px;bottom:1px;left:50%;transform:translateX(-50%)}
+.candle-body{position:absolute;width:80%;left:50%;transform:translateX(-50%);border-radius:1px}
+.market-card-right{text-align:right;min-width:0;overflow:hidden}
+.market-price{font-size:1.15rem;font-weight:800;font-family:var(--font-mono);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.market-change{font-size:.78rem;font-family:var(--font-mono);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up-text{color:var(--red-down)}.down-text{color:var(--green-up)}.flat-text{color:var(--text-primary)}
+
+/* Contract tabs */
+.contract-tabs-bar{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;min-height:32px;-webkit-overflow-scrolling:touch}
+.contract-tab{background:var(--panel-bg);border:1px solid var(--panel-border);color:var(--text-secondary);padding:3px 8px;border-radius:10px;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:var(--font-mono);display:inline-flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0}
+.tab-label{font-size:.8rem;font-weight:700;color:var(--text-primary)}
+.tab-date{font-size:.62rem;color:var(--text-secondary)}
+.contract-tab:hover{border-color:var(--accent-gold)}
+.contract-tab.active{background:var(--accent-gold);border-color:var(--accent-gold)}
+.contract-tab.active .tab-label{color:#000}.contract-tab.active .tab-date{color:rgba(0,0,0,.75)}
+
+/* Main cards */
+.main-card{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:4px;padding:clamp(10px,1.4vw,16px);display:flex;flex-direction:column;gap:clamp(8px,1.2vw,12px);width:100%;overflow:hidden}
+.clickable-card{cursor:pointer;transition:background-color .2s}.clickable-card:hover{background:#181c27}
+.quote-header-box{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.symbol-code{font-size:1.05rem;font-weight:800;color:var(--accent-gold);font-family:var(--font-mono);display:flex;align-items:center;gap:6px}
+.symbol-code small{font-size:.7rem;color:var(--text-secondary);font-weight:400}
+.chev{font-size:.7rem;color:var(--text-secondary);transition:transform .2s}
+.price-display-area{text-align:right}
+.big-price{font-size:1.6rem;font-weight:800;font-family:var(--font-mono);line-height:1.1;letter-spacing:-.5px}
+.change-line{font-size:.82rem;font-family:var(--font-mono);font-weight:600;margin-top:2px;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.vol-right-box{text-align:right;padding-left:10px;border-left:1px solid #1e222d}
+.vol-label{font-size:.7rem;color:var(--text-secondary);margin-bottom:2px}
+.vol-value{font-size:1.15rem;font-weight:800;font-family:var(--font-mono)}
+.metrics-grid{display:none;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;padding-top:8px;border-top:1px dashed #2a2e39}
+.metrics-grid.open{display:grid}
+.metric-box{background:var(--card-inner-bg);border:1px solid #232733;border-radius:3px;padding:6px 8px;text-align:center}
+.metric-label{font-size:.72rem;color:var(--text-secondary);margin-bottom:2px}
+.metric-value{font-size:1rem;font-weight:700;font-family:var(--font-mono)}
+
+/* T quote header */
+.t-quote-header{display:flex;justify-content:space-between;align-items:center;background:#181c27;padding:8px 10px;border-radius:4px;font-weight:700;font-size:.88rem;margin-bottom:6px;gap:6px;width:100%}
+.header-badge-call,.header-badge-put{color:#fff;padding:6px 10px;border-radius:4px;font-weight:800;letter-spacing:.5px;flex:1;min-width:0;font-size:.88rem;display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden}
+.header-badge-call{background:var(--red-down);box-shadow:0 2px 4px rgba(246,70,93,.3)}
+.header-badge-put{background:var(--green-up);box-shadow:0 2px 4px rgba(0,192,118,.3)}
+.scroll-arrow-btn{background:rgba(0,0,0,.25);border:none;color:#fff;font-size:.85rem;padding:1px 6px;border-radius:3px;cursor:pointer}
+.scroll-arrow-btn:hover{background:rgba(0,0,0,.5)}
+.t-quote-title-container{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;position:relative;flex:0 0 auto;padding:0 4px;max-width:40%}
+.t-table-main-title{color:var(--accent-gold);font-family:var(--font-mono);font-size:.92rem;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-table-sub-title{color:var(--text-secondary);font-size:.72rem;font-family:var(--font-mono);white-space:nowrap}
+.contract-select-overlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.t-table-container{max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.t-quote-table{width:100%;table-layout:fixed;border-collapse:collapse;font-family:var(--font-mono);font-size:.8rem}
+.t-quote-table th{position:sticky;top:0;z-index:5;background:#181c27;color:#fff;padding:7px 2px;font-size:.78rem;font-weight:700;border-bottom:1px solid var(--panel-border);white-space:nowrap}
+.t-quote-table th.center-toggle-header{cursor:pointer;width:20%;text-align:center;color:var(--accent-gold)}
+.t-quote-table th.center-toggle-header:hover{color:#fff;background:#232733}
+.t-quote-table td{padding:5px 1px;text-align:center;border-bottom:1px solid #1a1e29;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
+.center-col{color:var(--accent-gold);font-weight:800;background:#181c27;font-size:.85rem;width:20%;cursor:pointer}
+.center-col:hover{background:#232733}
+.side-col{width:40%;padding:0!important;overflow:hidden}
+.side-col.itm{background:rgba(240,185,11,.06)}
+.side-scroll-box{width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.side-scroll-box::-webkit-scrollbar{display:none}
+.side-inner{display:grid;grid-template-columns:repeat(var(--nc,3),1fr);align-items:center;min-width:calc(var(--nc,3)*52px);padding:0 2px;gap:1px}
+.col-vol.vmax{background:rgba(240,185,11,.28);box-shadow:inset 0 0 0 1px var(--accent-gold);color:var(--accent-gold);font-weight:800;border-radius:3px}
+.col-wrap{position:relative;display:flex;justify-content:flex-end}
+.col-wrap button{background:var(--panel-bg);border:1px solid var(--panel-border);color:var(--text-secondary);padding:3px 11px;border-radius:4px;font-size:.78rem;cursor:pointer;font-family:var(--font-main)}
+.col-wrap button:hover{color:#fff;border-color:var(--accent-gold)}
+#col-panel{display:none;position:absolute;top:100%;right:0;z-index:30;margin-top:4px;flex-direction:column;gap:9px;background:#181c27;border:1px solid var(--panel-border);border-radius:6px;padding:10px 14px;min-width:120px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#col-panel.open{display:flex}
+#col-panel label{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-primary);font-size:.85rem;white-space:nowrap}
+.col-vol.vmax2{background:rgba(240,185,11,.12);box-shadow:inset 0 0 0 1px rgba(240,185,11,.55);color:var(--accent-gold);font-weight:700;border-radius:3px}
+.col-code{color:var(--text-secondary);font-size:.72rem}
+.col-vol,.col-strength{color:#fff;font-size:.78rem}
+.col-price{font-weight:700;color:#fff;font-size:.82rem}
+.col-strength{position:relative;display:block;height:20px;line-height:20px}
+.col-strength .fb{position:absolute;top:2px;bottom:2px}
+.col-strength .fb.pos{left:50%;background:var(--red-down)}
+.col-strength .fb.neg{right:50%;background:var(--green-up)}
+.col-strength b{position:relative;z-index:1;font-weight:600;color:#fff}
+.tap{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+#tx-card .price-display-area{cursor:pointer}
+#book-mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:12px}
+.book-box{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:6px;width:100%;max-width:420px;padding:12px;font-family:var(--font-mono)}
+.book-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.book-title{color:var(--accent-gold);font-weight:700;font-size:.92rem}
+.book-x{background:none;border:none;color:var(--text-secondary);font-size:1.2rem;cursor:pointer}
+.book-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:.88rem}
+.book-tbl th{color:var(--text-secondary);font-weight:500;font-size:.75rem;padding:4px 2px;border-bottom:1px solid var(--panel-border)}
+.book-tbl td{padding:4px 6px;position:relative;height:26px;border-bottom:1px solid #1a1e29}
+.book-tbl td i{position:absolute;top:2px;bottom:2px}
+.book-tbl td.bid i{right:0;background:rgba(246,70,93,.28)}.book-tbl td.ask i{left:0;background:rgba(0,192,118,.28)}
+.book-tbl td b{position:relative;font-weight:600}
+.book-tbl td.bid{text-align:right}.book-tbl td.ask{text-align:left}
+.book-tbl td.px{text-align:center;font-weight:700}
+.book-tbl td.px.bid{color:var(--red-down)}.book-tbl td.px.ask{color:var(--green-up)}
+.book-tbl tr.tot td{border-bottom:none;color:var(--text-secondary);font-size:.8rem}
+.book-wait,.book-note{color:var(--text-secondary);font-size:.78rem;text-align:center;padding:14px 4px}
+.book-note{padding:6px 0 0}
+.contract-tab.settled .tab-label,#exp-label.settled{text-decoration:line-through}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:#08090c;border-top:1px solid var(--panel-border);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;background:none;border:none;color:var(--text-secondary);padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--font-main);font-size:.75rem;cursor:pointer}
+.tabbar button i{font-size:1.15rem}.tabbar button.on{color:var(--accent-gold)}
+.chart-box{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:4px;padding:6px;position:relative}
+.chart-toolbar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;padding:2px 2px 6px}
+.chart-toolbar button{background:none;border:1px solid transparent;color:var(--text-secondary);padding:3px 9px;border-radius:4px;font-family:var(--font-mono);font-size:.82rem;cursor:pointer}
+.chart-toolbar button:hover{color:var(--text-primary);background:#1e222d}
+.chart-toolbar button.on{color:var(--accent-gold);background:#1e222d;border-color:#2a2e39}
+.chart-toolbar .sep{width:1px;height:16px;background:var(--panel-border);margin:0 4px}
+.chart-legend{font-family:var(--font-mono);font-size:.76rem;color:var(--text-secondary);padding:0 4px 4px;min-height:20px;display:flex;gap:10px;flex-wrap:wrap}
+#chart{width:100%;height:calc(100vh - 230px);height:calc(100dvh - 230px);min-height:320px}
+#chart-msg{position:absolute;left:0;right:0;top:50%;text-align:center;color:var(--text-secondary);font-size:.85rem;pointer-events:none}
+.side-inner span{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atm-strike{background:var(--accent-gold)!important;color:#000!important;font-weight:900;box-shadow:inset 0 0 8px rgba(0,0,0,.3)}
+.warn{color:var(--accent-gold);font-size:.75rem;padding:2px 2px 6px}
+.ws-status-bar{display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:var(--text-secondary);padding-top:6px;margin-top:6px;border-top:1px dashed #232733;flex-wrap:wrap;gap:4px}
+.status-indicator{display:flex;align-items:center;gap:5px}
+.indicator-dot{width:6px;height:6px;border-radius:50%;background:#666}
+.indicator-dot.online{background:var(--green-up);box-shadow:0 0 5px var(--green-up)}
+.indicator-dot.offline{background:var(--accent-gold)}
+@media (max-width:768px){html,body{font-size:12px;padding:4px}.brand-logo{font-size:1.05rem}.market-price{font-size:1.05rem}.big-price{font-size:1.4rem}.t-quote-table th{font-size:.72rem}.center-col{font-size:.8rem}.col-code{font-size:.65rem}.col-vol,.col-strength{font-size:.72rem}.col-price{font-size:.75rem}.tab-label{font-size:.75rem}.tab-date{font-size:.6rem}}
+input{-webkit-user-select:text;user-select:text}
+.wl-add{display:flex;gap:6px;align-items:center}
+.wl-add input{flex:1;min-width:0;background:var(--card-inner-bg);border:1px solid var(--panel-border);color:var(--text-primary);border-radius:4px;padding:6px 8px;font-family:var(--font-mono);font-size:.9rem;text-transform:uppercase}
+.wl-add button,.wl-edit{background:none;border:1px solid var(--panel-border);color:var(--text-secondary);padding:5px 11px;border-radius:4px;cursor:pointer;font-family:var(--font-main);font-size:.82rem;white-space:nowrap}
+.wl-add button:hover,.wl-edit:hover,.wl-edit.on{color:var(--accent-gold);border-color:var(--accent-gold)}
+.wl-head,.wl-row{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;column-gap:4px;align-items:center}
+.wl-head{color:var(--text-secondary);font-size:.78rem;padding:6px 4px;border-bottom:1px solid var(--panel-border)}
+.wl-head span:not(:first-child),.wl-row .wl-p,.wl-row .wl-c,.wl-row .wl-r{text-align:right}
+.wl-row{padding:11px 4px 10px;border-bottom:1px solid #1a1e29;row-gap:7px}
+.wl-n{font-size:1rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.wl-n button{background:none;border:none;color:var(--red-down);font-size:.95rem;cursor:pointer;padding:0 2px}
+.wl-p{font-family:var(--font-mono);font-size:1.15rem;font-weight:800}
+.wl-c,.wl-r{font-family:var(--font-mono);font-size:1rem;font-weight:700}
+.wl-s{font-size:.78rem;color:var(--text-secondary);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-bar{grid-column:2 / 5;position:relative;height:3px;background:#2a2e39;border-radius:2px}
+.wl-bar i{position:absolute;top:0;bottom:0;border-radius:2px}
+.wl-bar b{position:absolute;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff}
+.wl-err{grid-column:1 / 5;color:var(--text-secondary);font-size:.78rem}
+.wl-empty{color:var(--text-secondary);text-align:center;padding:24px 0;font-size:.85rem}
+.ind-wrap{position:relative;display:inline-block}
+#ind-panel{display:none;position:absolute;top:100%;left:0;z-index:30;margin-top:4px;flex-direction:column;gap:9px;background:#181c27;border:1px solid var(--panel-border);border-radius:6px;padding:10px 14px;min-width:130px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#ind-panel.open{display:flex}
+#ind-panel label{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-primary);font-size:.85rem;white-space:nowrap}
+.t-quote-table thead tr:first-child th{height:31px}
+.t-quote-table thead tr.sum-row th{top:31px;background:#10131b;border-bottom:2px solid var(--panel-border);padding:5px 0;z-index:4}
+.t-quote-table thead tr.sum-row th.sum-mid{color:var(--accent-gold);font-size:.74rem;cursor:default}
+.col-sum{font-weight:800;color:#fff;font-size:.78rem}
+.col-sep{height:1px;background:var(--panel-border);margin:2px 0}
+#col-panel select{background:var(--card-inner-bg);color:var(--text-primary);border:1px solid var(--panel-border);border-radius:4px;padding:3px 6px;font-family:var(--font-main);font-size:.82rem}
+#col-panel label.sel{justify-content:space-between;gap:12px}
+#combo-box:empty{display:none}
+.combo{background:var(--card-inner-bg);border:1px solid #232733;border-left:4px solid var(--accent-gold);border-radius:4px;padding:8px 10px;margin-bottom:6px;display:flex;flex-direction:column;gap:3px}
+.combo-main{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:.92rem}
+.combo-main b{font-family:var(--font-mono);font-size:1.05rem}
+.col-wrap{gap:6px;flex-wrap:wrap}
+#flow-clear:hover{color:var(--red-down);border-color:var(--red-down)}
+.combo-sub{color:var(--text-secondary);font-size:.74rem;font-family:var(--font-mono);line-height:1.55}
+#login-mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;padding:14px}
+.login-box{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:8px;width:100%;max-width:380px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.login-box label.chk{flex-direction:row;align-items:flex-start;gap:8px;color:var(--text-primary);cursor:pointer;line-height:1.4}
+.login-box label.chk input{padding:0;margin-top:2px}
+.lg-link{background:none;border:none;color:var(--text-secondary);font-size:.76rem;text-align:left;cursor:pointer;text-decoration:underline;padding:0}
+.login-title{color:var(--accent-gold);font-weight:800;font-size:1.1rem}
+.login-hint{color:var(--text-secondary);font-size:.76rem;line-height:1.5}
+.login-box label{display:flex;flex-direction:column;gap:4px;color:var(--text-secondary);font-size:.8rem}
+.login-box input{background:var(--card-inner-bg);border:1px solid var(--panel-border);color:var(--text-primary);border-radius:4px;padding:8px;font-size:.95rem;font-family:var(--font-mono)}
+.login-box input[type=file]{font-family:var(--font-main);font-size:.82rem}
+#login-err{color:var(--red-down);font-size:.8rem;min-height:1em}
+#login-btn{background:var(--accent-gold);color:#000;border:none;border-radius:4px;padding:10px;font-weight:800;font-size:.95rem;cursor:pointer}
+#login-btn:disabled{opacity:.5}
+</style>
+</head>
+<body>
+<div class="container" id="page-opt">
+  <header class="top-bar">
+    <div class="top-bar-left">
+      <div class="brand-logo">選擇權 <span class="brand-subtitle">| 富邦新一代 API</span></div>
+      <div class="badge-real" id="pill"><i class="fa-solid fa-circle-check"></i> <span id="pill-text">連線中…</span></div>
+      <div class="status-dot-text"><span class="status-dot-yellow"></span><span id="top-sess">--</span>
+        <span id="top-clock" style="font-family:var(--font-mono);margin-left:4px">--:--:--</span></div>
+      <button class="wl-edit" id="logout-btn" title="登出並刪除伺服器上的憑證暫存檔">登出</button>
+    </div>
+  </header>
+
+  <section class="market-strip-grid" id="cards"></section>
+  <nav class="contract-tabs-bar" id="tabs"></nav>
+
+  <main style="display:flex;flex-direction:column;gap:8px">
+    <div class="main-card clickable-card" id="tx-card" style="border-left:3px solid var(--accent-gold)"></div>
+    <div class="main-card clickable-card" id="opt-card" style="border-left:3px solid var(--green-up)"></div>
+
+    <div class="col-wrap"><span id="flow-saved" class="wl-s" style="align-self:center;margin-right:4px"></span><button id="flow-save" title="立刻把目前力道寫入資料庫（平常每 15 秒自動存）">💾 儲存力道</button><button id="flow-clear" title="外盤 / 內盤歸零，總量不動">🗑 清除累積</button><button id="col-btn">⚙ 欄位設定</button><div id="col-panel"></div></div>
+
+    <div class="main-card">
+      <div id="combo-box"></div>
+      <div class="t-quote-header">
+        <div class="header-badge-call"><button class="scroll-arrow-btn" onclick="stepScroll(-1,'call')">◂</button><span>買權 CALL</span><button class="scroll-arrow-btn" onclick="stepScroll(1,'call')">▸</button></div>
+        <div class="t-quote-title-container">
+          <div class="t-table-main-title"><i class="fa-solid fa-caret-left" style="font-size:.8rem"></i><span id="exp-label">載入中...</span><i class="fa-solid fa-caret-right" style="font-size:.8rem"></i></div>
+          <div class="t-table-sub-title" id="exp-sub">--</div>
+          <select id="contract-dropdown" class="contract-select-overlay" title="選擇到期別"></select>
+        </div>
+        <div class="header-badge-put"><button class="scroll-arrow-btn" onclick="stepScroll(-1,'put')">◂</button><span>賣權 PUT</span><button class="scroll-arrow-btn" onclick="stepScroll(1,'put')">▸</button></div>
+      </div>
+      <div class="warn" id="warn"></div>
+      <div class="t-table-container">
+        <table class="t-quote-table">
+          <thead><tr>
+            <th class="side-col"><div class="side-scroll-box" id="call-header-scroll"><div class="side-inner" id="call-head-inner"></div></div></th>
+            <th class="center-toggle-header" id="center-th" title="點擊切換 履約價 / 參考價"><span id="center-th-text">履約價</span> <span style="font-size:.85rem">↕</span></th>
+            <th class="side-col"><div class="side-scroll-box" id="put-header-scroll"><div class="side-inner" id="put-head-inner"></div></div></th>
+          </tr><tr class="sum-row">
+            <th class="side-col"><div class="side-scroll-box call-side-scroll"><div class="side-inner" id="call-sum-inner"></div></div></th>
+            <th class="sum-mid" title="該到期別全部履約價（全市場）的加總">全市場合計</th>
+            <th class="side-col"><div class="side-scroll-box put-side-scroll"><div class="side-inner" id="put-sum-inner"></div></div></th>
+          </tr></thead>
+          <tbody id="tbody"><tr><td colspan="3" style="color:var(--text-secondary);padding:20px">載入中...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="ws-status-bar">
+        <div class="status-indicator"><span class="indicator-dot" id="ws-dot"></span><span>連線狀態: REST 輪詢（報價 5 秒 / 選擇權鏈 15 秒）</span></div>
+        <div>更新時間: <span id="upd" style="font-family:var(--font-mono)">--</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="container" id="page-fut" style="display:none">
+  <header class="top-bar">
+    <div class="top-bar-left">
+      <div class="brand-logo">台指期 <span class="brand-subtitle">| TXF 近月連續</span></div>
+      <span class="market-price flat-text" id="fh-price">--</span>
+      <span class="market-change flat-text" id="fh-chg"></span>
+      <span class="status-dot-text" id="fh-sym"></span>
+    </div>
+  </header>
+  <div class="chart-box">
+    <div class="chart-toolbar" id="chart-toolbar">
+      <button data-tf="5">5K</button><button data-tf="15">15K</button><button data-tf="60">60K</button><button data-tf="D">日K</button>
+      <span class="sep"></span>
+      <button data-sess="regular">日盤</button><button data-sess="afterhours">夜盤</button><button data-sess="all">全日盤</button>
+      <span class="sep"></span>
+      <div class="ind-wrap"><button id="ind-btn">指標 ▾</button><div id="ind-panel"></div></div>
+    </div>
+    <div class="chart-legend" id="chart-legend"></div>
+    <div id="chart"></div>
+    <div id="chart-msg"></div>
+  </div>
+</div>
+
+<div class="container" id="page-watch" style="display:none">
+  <header class="top-bar">
+    <div class="top-bar-left"><div class="brand-logo">自選股 <span class="brand-subtitle">| 報價</span></div>
+      <span class="status-dot-text" id="wl-upd"></span></div>
+    <button class="wl-edit" id="wl-edit">編輯</button>
+  </header>
+  <div class="main-card">
+    <div class="wl-add"><input id="wl-input" placeholder="輸入代碼，如 2330、IX0001、TXF1!" autocomplete="off"><button id="wl-add">加入</button></div>
+    <div class="wl-head"><span>商品</span><span>成交</span><span>漲跌</span><span>漲幅%</span></div>
+    <div id="wl-list"><div class="wl-empty">載入中…</div></div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <button id="tab-opt" class="on" onclick="setPage('opt')"><i class="fa-solid fa-table-cells"></i><span>台指選擇權</span></button>
+  <button id="tab-fut" onclick="setPage('fut')"><i class="fa-solid fa-chart-line"></i><span>台指期</span></button>
+  <button id="tab-watch" onclick="setPage('watch')"><i class="fa-solid fa-star"></i><span>自選股</span></button>
+</nav>
+
+<div id="login-mask"><form class="login-box" id="login-form" autocomplete="off">
+  <div class="login-title">登入富邦新一代 API</div>
+  <div class="login-hint">可手動輸入登入，或（伺服器 .env 有設定時）直接用 .env 登入。憑證檔只暫存在伺服器的私有暫存資料夾，按「登出」或程式結束就會刪除；手動輸入的密碼不會被儲存。</div>
+  <button type="button" id="login-env-btn" style="display:none;background:transparent;color:var(--accent-gold);border:1px solid var(--accent-gold);border-radius:4px;padding:10px;font-weight:800;font-size:.95rem;cursor:pointer">使用 .env 登入</button>
+  <label>身分證字號<input id="lg-id" autocomplete="off" required></label>
+  <label>登入密碼<input id="lg-pwd" type="password" autocomplete="new-password" required></label>
+  <label>憑證檔 (.p12 / .pfx)<input id="lg-cert" type="file" accept=".p12,.pfx"></label>
+  <label>憑證密碼<input id="lg-cpwd" type="password" autocomplete="new-password"></label>
+  <label class="chk"><input type="checkbox" id="lg-remember"> 記住此裝置（加密存在此瀏覽器，下次自動登入；已記住時可不用再選憑證檔）</label>
+  <button type="button" id="lg-forget" class="lg-link">清除此裝置的記憶</button>
+  <div id="login-err"></div>
+  <button type="submit" id="login-btn">登入</button>
+</form></div>
+
+<div id="book-mask"><div class="book-box">
+  <div class="book-head"><span class="book-title" id="book-title">五檔</span><button class="book-x" onclick="closeBook()">✕</button></div>
+  <div id="book-body"></div>
+</div></div>
+
+<script src="indicators/common.js"></script>
+<script src="indicators/atr.js"></script>
+<script src="indicators/zones.js"></script>
+<script src="indicators/trend.js"></script>
+<script src="indicators/ema.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+/* ---------- 登入（上傳憑證）：伺服器回 401 時自動跳出登入視窗 ---------- */
+const _rawFetch = window.fetch.bind(window);
+window.fetch = async (...a) => { const r = await _rawFetch(...a); if (r.status === 401) { showLogin("尚未登入或登入已失效，請登入"); tryAutoLogin(); } return r; };
+function showLogin(msg) { $("login-mask").style.display = "flex"; if (msg) $("login-err").textContent = msg; }
+function hideLogin() { $("login-mask").style.display = "none"; $("login-err").textContent = ""; }
+/* ---------- 記住此裝置：憑證 + 帳密以 AES-GCM 加密後存在本機瀏覽器（IndexedDB），金鑰設為不可匯出 ---------- */
+const vaultOK = !!(window.crypto && crypto.subtle && window.indexedDB);
+const idb = () => new Promise((ok, no) => { const r = indexedDB.open("optboard", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function kvGet(k) { const db = await idb(); return new Promise((ok, no) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }); }
+async function kvSet(k, v) { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = ok; t.onerror = () => no(t.error); }); }
+async function kvDel(k) { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = ok; t.onerror = () => no(t.error); }); }
+const toB64 = buf => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s); };
+const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function vaultSave(o) {
+  let key = await kvGet("aes");
+  if (!key) { key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]); await kvSet("aes", key); }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(o)));
+  await kvSet("vault", { iv, ct });
+}
+async function vaultLoad() {
+  const key = await kvGet("aes"), v = await kvGet("vault");
+  if (!key || !v) return null;
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: v.iv }, key, v.ct)));
+}
+async function vaultClear() { try { await kvDel("vault"); await kvDel("aes"); } catch (e) {} }
+async function hasVault() { try { return vaultOK && !!(await kvGet("vault")); } catch (e) { return false; } }
+
+async function postLogin(o) {
+  const fd = new FormData();
+  fd.append("id", o.id); fd.append("pwd", o.pwd); fd.append("cert_pwd", o.cpwd || "");
+  fd.append("cert", new Blob([fromB64(o.cert)]), "cert.p12");
+  return (await _rawFetch("/api/login", { method: "POST", body: fd })).json();
+}
+
+let envAvail = false;                        // 伺服器 .env 是否已設定好可直接登入（由 /api/status 告知）
+async function postEnvLogin() { return (await _rawFetch("/api/login/env", { method: "POST" })).json(); }
+function setEnvBtn() { $("login-env-btn").style.display = envAvail ? "" : "none"; }
+$("login-env-btn").addEventListener("click", async () => {
+  const b = $("login-env-btn"); b.disabled = true; $("login-err").textContent = "使用 .env 登入中…";
+  try {
+    const d = await postEnvLogin();
+    if (!d.ok) { $("login-err").textContent = d.error || "登入失敗"; return; }
+    autoStop = false; hideLogin(); boot();
+  } catch (e) { $("login-err").textContent = "無法連線伺服器：" + e.message; }
+  finally { b.disabled = false; }
+});
+
+let autoBusy = false, autoStop = false;      // 自動登入失敗過一次就不再自動重試，避免密碼錯誤反覆嘗試造成帳號鎖定
+async function tryAutoLogin() {
+  if (autoBusy || autoStop) return false;
+  autoBusy = true;
+  try {
+    if (envAvail) {                          // 優先用伺服器 .env 登入，不用輸入也不用記住此裝置
+      $("login-err").textContent = "使用 .env 自動登入中…";
+      const d = await postEnvLogin();
+      if (d.ok) { hideLogin(); boot(); return true; }
+      autoStop = true; $("login-err").textContent = ".env 自動登入失敗：" + (d.error || "");
+      return false;
+    }
+    if (!vaultOK) return false;
+    const o = await vaultLoad();
+    if (!o) { autoStop = true; return false; }
+    $("login-err").textContent = "自動登入中…";
+    const d = await postLogin(o);
+    if (d.ok) { hideLogin(); boot(); return true; }
+    autoStop = true; $("login-err").textContent = "自動登入失敗：" + (d.error || "");
+    return false;
+  } catch (e) { autoStop = true; return false; }
+  finally { autoBusy = false; }
+}
+
+(async () => {
+  try { $("lg-id").value = localStorage.getItem("lgId") || ""; } catch (e) {}
+  const rem = $("lg-remember");
+  if (!vaultOK) { rem.disabled = true; rem.parentElement.title = "此功能需要 HTTPS 或 localhost 環境"; rem.parentElement.append("（目前環境不支援）"); }
+  else { rem.checked = await hasVault(); }
+})();
+$("lg-forget").addEventListener("click", async () => { await vaultClear(); autoStop = true; $("lg-remember").checked = false; $("login-err").textContent = "已清除此裝置的記憶"; });
+
+$("login-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  $("login-btn").disabled = true; $("login-err").textContent = "登入中…";
+  try {
+    const file = $("lg-cert").files[0];
+    let o = { id: $("lg-id").value.trim(), pwd: $("lg-pwd").value, cpwd: $("lg-cpwd").value, cert: null };
+    if (file) o.cert = toB64(await file.arrayBuffer());
+    else { const v = await vaultLoad().catch(() => null); if (v) o.cert = v.cert; }
+    if (!o.cert) { $("login-err").textContent = "請選擇憑證檔 (.p12 / .pfx)"; return; }
+    const d = await postLogin(o);
+    if (!d.ok) { $("login-err").textContent = d.error || "登入失敗"; return; }
+    try { localStorage.setItem("lgId", o.id); } catch (e) {}
+    if ($("lg-remember").checked && vaultOK) { try { await vaultSave(o); } catch (e) { console.warn("vault", e); } }
+    else await vaultClear();
+    autoStop = false;
+    $("lg-pwd").value = $("lg-cpwd").value = $("lg-cert").value = ""; hideLogin(); boot();
+  } catch (e) { $("login-err").textContent = "無法連線伺服器：" + e.message; }
+  finally { $("login-btn").disabled = false; }
+});
+$("logout-btn").addEventListener("click", async () => {
+  try { await _rawFetch("/api/logout", { method: "POST" }); } catch (e) {}
+  autoStop = true;                           // 主動登出後，這次頁面不要再自動登入
+  showLogin("已登出，伺服器上的憑證暫存檔已刪除（重新整理頁面會自動重新登入；也可按上方「使用 .env 登入」）");
+});
+const nf = (n, d = 2) => n == null ? "--" : Number(n).toLocaleString("zh-TW", { maximumFractionDigits: d });
+const nfi = n => nf(n, 0);
+const cls = c => c > 0 ? "up-text" : c < 0 ? "down-text" : "flat-text";
+const sg = c => c > 0 ? "+" : "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m]));
+
+let expiries = [], selected = null, lastChain = null, lastQuotes = null;
+let futMode = null, centerMode = "strike", txOpen = false, optOpen = false, basis = 0;
+const modeLabel = () => futMode === "night" ? "夜盤" : "日盤";
+
+/* ---------- 上方報價卡 ---------- */
+function candle(q) {
+  const o = q?.open, h = q?.high, l = q?.low, c = q?.price;
+  let col = "var(--text-secondary)", top = "30%", ht = "40%";
+  if (o && h && l && c) {
+    col = c >= o ? "var(--red-down)" : "var(--green-up)";
+    const mx = Math.max(h, o, c), mn = Math.min(l, o, c), sp = (mx - mn) || 1;
+    const bt = Math.max(o, c), bb = Math.min(o, c);
+    top = ((mx - bt) / sp * 100) + "%"; ht = Math.max((bt - bb) / sp * 100, 12) + "%";
+  }
+  return `<div class="mini-candle"><div class="candle-wick" style="background:${col}"></div><div class="candle-body" style="background:${col};top:${top};height:${ht}"></div></div>`;
+}
+
+function flowBox(f) {
+  const w = f?.flow;
+  if (!w) return `<div class="vol-right-box"><div class="vol-label">主力籌碼</div><div class="vol-value flat-text">--</div></div>`;
+  return `<div class="vol-right-box"><div class="vol-label">主力籌碼 (賣成筆−買成筆)</div>
+    <div class="vol-value ${cls(w.net)}">${sg(w.net)}${nfi(w.net)}</div>
+    <div class="vol-label" style="margin:2px 0 0">賣 ${nfi(w.ask)} / 買 ${nfi(w.bid)}</div></div>`;
+}
+
+function mcard(title, q, d = 2, toggle = false) {
+  const ok = q && q.ok, c = ok ? (q.change ?? 0) : 0, k = ok ? cls(c) : "flat-text";
+  const extra = toggle && q?.flow ? `<div class="market-change ${cls(q.flow.net)}" style="font-size:.72rem;text-align:right">籌碼 ${sg(q.flow.net)}${nfi(q.flow.net)}</div>` : "";
+  const tag = toggle ? `<small>⇄ ${modeLabel()}</small>` : "";
+  const chg = ok ? `${sg(c)}${nf(c, d)} (${sg(c)}${nf(Math.abs(q.changePercent ?? 0))}%)` : esc(q?.error ?? "無資料");
+  return `<div class="market-card${toggle ? " fut" : ""}"${toggle ? ' title="點擊切換日盤/夜盤"' : ""}>
+    <div class="market-card-title">${title}${tag}</div>
+    <div class="market-card-body"><div class="market-card-left">${candle(ok ? q : null)}</div>
+    <div class="market-card-right"><div class="market-price ${k}">${ok ? nf(q.price, d) : "--"}</div><div class="market-change ${k}">${chg}</div></div></div>${extra}</div>`;
+}
+
+function curFut() {
+  const f = lastQuotes?.fut; if (!f) return null;
+  if (!futMode) futMode = f.auto || "day";
+  return f[futMode] ?? { ok: false, error: f.error };
+}
+
+function renderTxCard(f) {
+  let h;
+  if (!f || !f.ok) {
+    h = `<div class="quote-header-box"><div class="symbol-code"><span>台指近月</span><small>${modeLabel()}</small></div>
+      <div class="change-line flat-text">${esc(f?.error ?? "無資料")}</div></div>`;
+  } else {
+    const c = f.change ?? 0, k = cls(c);
+    h = `<div class="quote-header-box">
+      <div class="symbol-code"><span>台指近月</span><small>${esc(f.symbol)}・${esc(f.session)}</small>
+        <i class="fa-solid fa-chevron-down chev" style="transform:rotate(${txOpen ? 180 : 0}deg)"></i></div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+        <div class="price-display-area" title="點擊查看五檔"><div class="big-price ${k}">${nfi(f.price)}</div>
+          <div class="change-line ${k}"><span>漲跌:</span><span>${sg(c)}${nf(c, 1)}</span><span>(${nf(f.changePercent)}%)</span></div></div>
+        <div class="vol-right-box"><div class="vol-label">總量</div><div class="vol-value">${nfi(f.volume)}</div></div>
+        ${flowBox(f)}
+      </div></div>
+      <div class="metrics-grid${txOpen ? " open" : ""}">
+        <div class="metric-box"><div class="metric-label">開盤價</div><div class="metric-value">${nfi(f.open)}</div></div>
+        <div class="metric-box"><div class="metric-label">最高價</div><div class="metric-value">${nfi(f.high)}</div></div>
+        <div class="metric-box"><div class="metric-label">最低價</div><div class="metric-value">${nfi(f.low)}</div></div>
+      </div>`;
+  }
+  $("tx-card").innerHTML = h;
+}
+
+function renderTop() {
+  const d = lastQuotes; if (!d) return;
+  const f = curFut();
+  $("cards").innerHTML = mcard("加權指數", d.twse) + mcard("櫃買指數", d.tpex) + mcard("台指期", f, 0, true);
+  renderTxCard(f);
+  $("top-sess").textContent = f?.ok ? (f.session || modeLabel()) : modeLabel();
+  renderHeads();
+  const want = futMode === "night" ? "night" : "day";
+  if (want !== chainWant) { chainWant = want; resetChain(); }       // 台指期切日/夜盤 → 選擇權鏈同步換成該時段
+  else renderOptInfo();
+  renderFutHead();
+}
+
+$("cards").addEventListener("click", ev => {
+  if (ev.target.closest(".market-card.fut")) { futMode = futMode === "night" ? "day" : "night"; renderTop(); renderChain(); }
+});
+$("tx-card").addEventListener("click", ev => {
+  const f = curFut();
+  if (ev.target.closest(".price-display-area") && f?.ok) { openBook(f.symbol, futMode === "night", `台指近月 ${modeLabel()} ${f.symbol}`); return; }
+  txOpen = !txOpen; renderTxCard(f);
+});
+$("opt-card").addEventListener("click", () => { optOpen = !optOpen; renderOptInfo(); });
+
+async function refreshQuotes() {
+  try {
+    lastQuotes = await (await fetch("/api/quotes")).json();
+    $("pill-text").textContent = "連線正常"; $("pill").className = "badge-real"; $("ws-dot").className = "indicator-dot online";
+    $("upd").textContent = lastQuotes.serverTime;
+    renderTop(); renderChain();
+  } catch (e) {
+    $("pill-text").textContent = "連線失敗"; $("pill").className = "badge-real bad"; $("ws-dot").className = "indicator-dot offline";
+  }
+}
+
+/* ---------- 價平 / I 值 / 價差（由選擇權鏈計算） ---------- */
+function calcOpt() {
+  const res = { atm: null, i: null, points: null, basis: 0 };
+  if (!lastChain) return res;
+  let minI = Infinity;
+  for (const r of lastChain.rows) {
+    const c = r.C?.price, p = r.P?.price;
+    if (c > 0 && p > 0) { const i = Math.abs(c - p); if (i < minI) { minI = i; res.atm = r.strike; res.i = i; res.diff = c - p; } }
+  }
+  if (res.atm != null) {
+    res.points = res.atm + res.diff;
+    const f = curFut();
+    if (f?.ok && f.price > 0) res.basis = res.points - f.price;
+  }
+  return res;
+}
+
+function renderOptInfo() {
+  const o = calcOpt(); basis = o.basis;
+  const has = o.atm != null, f = curFut(), hasF = has && f?.ok && f.price > 0;
+  const col = !hasF ? "var(--green-up)" : (o.basis >= 0 ? "var(--red-down)" : "var(--green-up)");
+  $("opt-card").style.borderLeftColor = col;
+  $("opt-card").innerHTML = `<div class="quote-header-box">
+    <div class="symbol-code" style="color:${col}"><span>選擇權資訊</span><i class="fa-solid fa-chevron-down chev" style="transform:rotate(${optOpen ? 180 : 0}deg)"></i></div>
+    <div class="price-display-area"><div class="big-price" style="color:${col}">${has ? nfi(o.points) : "--"}</div>
+    <div class="change-line" style="color:var(--text-secondary)">價平合成點數</div></div></div>
+    <div class="metrics-grid${optOpen ? " open" : ""}">
+      <div class="metric-box"><div class="metric-label">價平履約價</div><div class="metric-value" style="color:var(--accent-gold)">${has ? o.atm : "--"}</div></div>
+      <div class="metric-box"><div class="metric-label">I 值</div><div class="metric-value">${has ? nfi(o.i) : "--"}</div></div>
+      <div class="metric-box"><div class="metric-label">${hasF ? (o.basis >= 0 ? "正價差" : "逆價差") : "價差"}</div>
+        <div class="metric-value" style="color:${hasF ? col : "var(--text-primary)"}">${hasF ? sg(o.basis) + nfi(o.basis) : "--"}</div></div>
+    </div>`;
+}
+
+/* ---------- 到期別 ---------- */
+function renderTabs() {
+  $("tabs").innerHTML = expiries.map(e =>
+    `<button class="contract-tab ${e.id === selected ? "active" : ""}${e.settled ? " settled" : ""}" data-id="${esc(e.id)}"><span class="tab-label">${esc(e.label)}</span><span class="tab-date">${esc(e.sub)}</span></button>`).join("");
+  $("contract-dropdown").innerHTML = expiries.map(e =>
+    `<option value="${esc(e.id)}" ${e.id === selected ? "selected" : ""}>${esc(e.label)}</option>`).join("");
+  const e = expiries.find(x => x.id === selected);
+  $("exp-label").textContent = e ? e.label : "--";
+  $("exp-label").classList.toggle("settled", !!e?.settled);
+  $("exp-sub").textContent = e ? e.sub : "--";
+}
+function selectExpiry(id) { selected = id; lastChain = null; renderTabs(); renderChain(); renderOptInfo(); refreshChain(); }
+$("tabs").addEventListener("click", ev => { const t = ev.target.closest(".contract-tab"); if (t) selectExpiry(t.dataset.id); });
+$("contract-dropdown").addEventListener("change", function () { selectExpiry(this.value); });
+
+async function loadExpiries() {
+  try {
+    const d = await (await fetch("/api/expiries")).json();
+    expiries = d.expiries || [];
+    if (!expiries.length) { $("warn").textContent = "找不到選擇權合約。請開 /api/debug 查看 txo_raw_sample 與 option_ticker_errors。"; return; }
+    if (!selected || !expiries.find(e => e.id === selected)) selected = expiries[0].id;
+    renderTabs(); refreshChain();
+  } catch (e) { $("warn").textContent = "載入到期別失敗：" + e.message; }
+}
+
+/* ---------- T 字表 ---------- */
+function pcell(x) { return !x ? "--" : x.error ? `<span title="${esc(x.error)}">ERR</span>` : nf(x.price); }
+function vcell(x) { return !x || x.error || !x.volume ? "--" : nfi(x.volume); }
+function fcell(x, max) {          // 力道 = 外盤量 - 內盤量；正紅柱、負綠柱
+  if (!x || x.error || x.flow == null) return `<span class="col-strength">--</span>`;
+  const v = x.flow, w = max > 0 ? Math.max(Math.abs(v) / max * 50, v ? 3 : 0) : 0;
+  const bar = v ? `<i class="fb ${v > 0 ? "pos" : "neg"}" style="width:${w}%"></i>` : "";
+  return `<span class="col-strength" title="外盤 ${nfi(x.out)} / 內盤 ${nfi(x.in)}">${bar}<b>${v ? sg(v) + nfi(v) : 0}</b></span>`;
+}
+function tgt(strike, x, dir) { return x && !x.error && x.price > 0 ? nfi(strike + dir * x.price - basis) : "--"; }
+
+/* 累積欄：各履約價跨所有到期別的 (外盤 − 內盤)，資料來自 SQLite（今日即時 + 本週前幾天） */
+function acell(a, max) {
+  if (!a) return `<span class="col-strength">--</span>`;
+  const v = a.net, w = max > 0 ? Math.max(Math.abs(v) / max * 50, v ? 3 : 0) : 0;
+  const bar = v ? `<i class="fb ${v > 0 ? "pos" : "neg"}" style="width:${w}%"></i>` : "";
+  return `<span class="col-strength" title="累積外盤 ${nfi(a.out)} / 內盤 ${nfi(a.in)}">${bar}<b>${v ? sg(v) + nfi(v) : 0}</b></span>`;
+}
+
+/* 表頭下方的「全市場合計」列：總量 = 全部履約價成交量加總；力道 = 全部履約價(外盤−內盤)加總 */
+function renderSum(cc, pc, d) {
+  const t = d.totals; if (!t) return;
+  const cell = (k, side) => {
+    const s = t[side], nm = side === "C" ? "買權" : "賣權";
+    if (k === "vol") return `<span class="col-sum" title="${nm}全部履約價總量（${s.vn}/${s.of} 檔有資料）">${nfi(s.vol)}</span>`;
+    if (k === "flow") return `<span class="col-sum ${cls(s.flow)}" title="${nm}外盤 ${nfi(s.out)} / 內盤 ${nfi(s.in)}（${s.n}/${s.of} 檔已訂閱）">${s.flow ? sg(s.flow) + nfi(s.flow) : 0}</span>`;
+    if (k === "acc") { const v = side === "C" ? t.accC : t.accP; return `<span class="col-sum ${cls(v)}" title="${nm}累積力道合計（${t.accScope === "week" ? "本週（含夜盤）" : "當前交易日"}，全部到期別）">${v ? sg(v) + nfi(v) : 0}</span>`; }
+    return `<span class="col-sum"></span>`;
+  };
+  $("call-sum-inner").innerHTML = cc.map(k => cell(k, "C")).join("");
+  $("put-sum-inner").innerHTML = pc.map(k => cell(k, "P")).join("");
+}
+
+/* 買賣權力道方向 → 四種組合（B = 外盤>內盤，買方主動；S = 內盤>外盤，賣方主動） */
+const EPS = 0.02;   // 外內盤差距小於 2% 視為中性
+const dirOf = s => { const tot = s.out + s.in; if (!tot) return 0; const r = s.flow / tot; return r > EPS ? 1 : r < -EPS ? -1 : 0; };
+const COMBOS = {
+  "SP+BC": { t: "看不跌 ▸ 趨勢多方", s: "看漲組合", c: "var(--red-down)" },
+  "SC+BP": { t: "看不漲 ▸ 趨勢空方", s: "看跌組合", c: "var(--green-up)" },
+  "SC+SP": { t: "看不漲 + 看不跌", s: "盤整組合", c: "var(--accent-gold)" },
+  "BC+BP": { t: "看漲 + 看跌", s: "多空交戰組合", c: "#b388ff" },
+};
+function renderCombo(d) {
+  const t = d.totals, box = $("combo-box"); if (!t) { box.innerHTML = ""; return; }
+  const c = dirOf(t.C), p = dirOf(t.P);
+  const cn = c > 0 ? "BC" : c < 0 ? "SC" : "", pn = p > 0 ? "BP" : p < 0 ? "SP" : "";
+  const key = cn === "BC" && pn === "SP" ? "SP+BC" : cn === "SC" && pn === "BP" ? "SC+BP" : cn === "SC" && pn === "SP" ? "SC+SP" : cn === "BC" && pn === "BP" ? "BC+BP" : "";
+  const cb = COMBOS[key] || { t: "方向不明（買賣權力道差距小於 2%）", s: "中性", c: "var(--text-secondary)" };
+  const fm = v => v ? sg(v) + nfi(v) : "0";
+  box.innerHTML = `<div class="combo" style="border-left-color:${cb.c}">
+    <div class="combo-main"><b style="color:${cb.c}">${key || "--"}</b><span>${cb.t}</span><span style="color:${cb.c};font-weight:700">${cb.s}</span></div>
+    <div class="combo-sub">買權 ${cn || "中性"} 力道 ${fm(t.C.flow)}（外 ${nfi(t.C.out)} / 內 ${nfi(t.C.in)}）｜賣權 ${pn || "中性"} 力道 ${fm(t.P.flow)}（外 ${nfi(t.P.out)} / 內 ${nfi(t.P.in)}）<br>
+    全市場力道涵蓋：買權 ${t.C.n}/${t.C.of}、賣權 ${t.P.n}/${t.P.of} 檔　B＝外盤&gt;內盤(買方主動)　S＝內盤&gt;外盤(賣方主動)</div></div>`;
+}
+
+/* ---------- 欄位設定（預設：價格 / 力道 / 總量；目標先不顯示） ---------- */
+const COL_LABEL = { tgt: "目標", vol: "總量", flow: "力道", price: "價格", acc: "累積" };
+const CALL_ORDER = ["tgt", "acc", "vol", "flow", "price"], PUT_ORDER = ["price", "flow", "vol", "acc", "tgt"];
+let colCfg = { price: true, flow: true, vol: true, tgt: false, acc: true };
+try { Object.assign(colCfg, JSON.parse(localStorage.getItem("colCfg") || "{}")); } catch (e) {}
+let strikeCfg = { mode: "part", n: 10 };          // 履約價檔數：全部 / 部分（中心上下各 n 檔）
+try { const s = JSON.parse(localStorage.getItem("strikeCfg") || "null"); if (s && (s.mode === "all" || s.mode === "part") && s.n > 0) strikeCfg = s; } catch (e) {}
+let accScope = localStorage.getItem("accScope2") === "day" ? "day" : "week";   // 累積範圍：預設本週（= Excel 的周累積 B 欄）；今日為選用
+function activeCols(order) { const a = order.filter(k => colCfg[k]); return a.length ? a : ["price"]; }
+
+function renderHeads() {
+  const cc = activeCols(CALL_ORDER), pc = activeCols(PUT_ORDER);
+  const cls = { tgt: "col-code", vol: "col-vol", flow: "col-strength", price: "col-price", acc: "col-strength" };
+  const lab = (k, side) => k === "tgt" ? (side === "C" ? "多方目標" : "空方目標") : k === "acc" ? (accScope === "week" ? "週累積" : "當日累積") : COL_LABEL[k];
+  $("call-head-inner").innerHTML = cc.map(k => `<span class="${cls[k]}">${lab(k, "C")}</span>`).join("");
+  $("put-head-inner").innerHTML = pc.map(k => `<span class="${cls[k]}">${lab(k, "P")}</span>`).join("");
+  document.documentElement.style.setProperty("--nc", Math.max(cc.length, pc.length));
+}
+function renderColPanel() {
+  const sv = strikeCfg.mode === "all" ? "all" : String(strikeCfg.n);
+  const ns = [5, 10, 15, 20, 30, 40]; if (strikeCfg.mode === "part" && !ns.includes(strikeCfg.n)) ns.push(strikeCfg.n);
+  $("col-panel").innerHTML = ["acc", "price", "flow", "vol", "tgt"].map(k =>
+    `<label><input type="checkbox" data-k="${k}" ${colCfg[k] ? "checked" : ""}>${COL_LABEL[k]}</label>`).join("")
+    + `<div class="col-sep"></div>`
+    + `<label class="sel">履約價檔數<select id="set-strike"><option value="all"${sv === "all" ? " selected" : ""}>全部履約價</option>`
+    + ns.sort((a, b) => a - b).map(n => `<option value="${n}"${sv === String(n) ? " selected" : ""}>價平上下各 ${n} 檔</option>`).join("") + `</select></label>`
+    + `<label class="sel">累積範圍<select id="set-acc"><option value="week"${accScope === "week" ? " selected" : ""}>本週累積（週一起，含夜盤）</option><option value="day"${accScope === "day" ? " selected" : ""}>當前交易日（15:00 換日）</option></select></label>`;
+}
+$("col-btn").addEventListener("click", ev => { ev.stopPropagation(); $("col-panel").classList.toggle("open"); });
+document.addEventListener("click", ev => { if (!ev.target.closest(".col-wrap")) $("col-panel").classList.remove("open"); });
+$("col-panel").addEventListener("change", ev => {
+  const t = ev.target;
+  if (t.id === "set-strike") {
+    strikeCfg = t.value === "all" ? { mode: "all", n: strikeCfg.n } : { mode: "part", n: +t.value };
+    try { localStorage.setItem("strikeCfg", JSON.stringify(strikeCfg)); } catch (e) {}
+    resetChain(); return;
+  }
+  if (t.id === "set-acc") {
+    accScope = t.value === "week" ? "week" : "day";
+    try { localStorage.setItem("accScope2", accScope); } catch (e) {}
+    renderHeads(); resetChain(); return;
+  }
+  const k = ev.target.dataset.k; if (!k) return;
+  colCfg[k] = ev.target.checked;
+  if (!Object.values(colCfg).some(Boolean)) { colCfg.price = true; renderColPanel(); }
+  try { localStorage.setItem("colCfg", JSON.stringify(colCfg)); } catch (e) {}
+  renderHeads(); renderChain();
+});
+renderColPanel();
+renderHeads();
+
+/* 儲存力道 / 清除累積（夜盤開盤前可手動歸零） */
+async function flowAct(btn, url, body, doneTxt) {
+  const old = btn.textContent; btn.disabled = true;
+  try {
+    const d = await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })).json();
+    btn.textContent = d.ok ? doneTxt : "失敗：" + (d.error || "");
+    if (d.ok && url.endsWith("clear")) resetChain();
+    if (d.ok && url.endsWith("save")) { $("flow-saved").textContent = "最後存檔 " + d.time; refreshChain(); }
+  } catch (e) { btn.textContent = "失敗：" + e.message; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2000);
+}
+$("flow-save").addEventListener("click", ev => flowAct(ev.currentTarget, "/api/flow/save", {}, "✓ 已儲存"));
+$("flow-clear").addEventListener("click", ev => {
+  const wk = accScope === "week";
+  if (!confirm(wk ? "清除「本週」所有力道累積（含日盤、夜盤與資料庫）？此動作無法復原。" : "清除「今日」力道累積（前一晚夜盤 + 今日日盤，含資料庫）？此動作無法復原。")) return;
+  flowAct(ev.currentTarget, "/api/flow/clear", { scope: accScope }, "✓ 已清除");
+});
+
+function sideCell(k, side, r, ctx) {
+  const x = r[side];
+  if (k === "tgt") return `<span class="col-code">${tgt(r.strike, x, side === "C" ? 1 : -1)}</span>`;
+  if (k === "vol") {
+    const v = x && !x.error ? x.volume : 0, rank = v > 0 ? ctx.vtop[side].indexOf(v) : -1;
+    const c = rank === 0 ? " vmax" : rank === 1 ? " vmax2" : "";
+    return `<span class="col-vol${c}"${rank >= 0 ? ` title="總量第 ${rank + 1} 大"` : ""}>${vcell(x)}</span>`;
+  }
+  if (k === "acc") return acell(r.acc?.[side], ctx.amax[side]);
+  if (k === "flow") return fcell(x, ctx.fmax[side]);
+  return `<span class="col-price tap" data-sym="${esc(x?.symbol || "")}" data-t="${esc(ctx.el)} ${r.strike} ${side === "C" ? "買權" : "賣權"}">${pcell(x)}</span>`;
+}
+
+function renderChain() {
+  const tb = $("tbody");
+  if (!lastChain) { tb.innerHTML = `<tr><td colspan="3" style="color:var(--text-secondary);padding:20px">載入中...</td></tr>`; return; }
+  const sc = { call: $("call-header-scroll").scrollLeft, put: $("put-header-scroll").scrollLeft };   // 重繪後保留橫向捲動位置
+
+  const d = lastChain, center = d.center, o = calcOpt(); basis = o.basis;
+  const atm = o.atm ?? d.atm;
+  const night = d.session === "night";
+  const info = `${night ? "夜盤" : "日盤"}・顯示 ${d.shown}/${d.strikesTotal} 檔履約價・力道自 ${d.flowSince} 起累計・已存入 SQLite${d.dbError ? "（寫入異常：" + d.dbError + "）" : ""}`;
+  const w = d.warning || (d.errors ? `有 ${d.errors} 檔報價取得失敗` : "");
+  $("warn").textContent = w ? w + "　" + info : info;
+  if (d.savedAt) $("flow-saved").textContent = "最後存檔 " + d.savedAt;
+  const rows = [...d.rows].sort((a, b) => b.strike - a.strike);
+  const mx = (k, f) => Math.max(0, ...rows.map(r => f(r[k])));
+  const top2 = k => [...new Set(rows.map(r => (r[k] && !r[k].error && r[k].volume) || 0).filter(v => v > 0))].sort((a, b) => b - a).slice(0, 2);
+  const ctx = {
+    el: $("exp-label").textContent,
+    fmax: { C: mx("C", x => Math.abs(x?.flow ?? 0)), P: mx("P", x => Math.abs(x?.flow ?? 0)) },
+    vtop: { C: top2("C"), P: top2("P") },
+    amax: { C: Math.max(0, ...rows.map(r => Math.abs(r.acc?.C?.net ?? 0))), P: Math.max(0, ...rows.map(r => Math.abs(r.acc?.P?.net ?? 0))) },
+  };
+  const cc = activeCols(CALL_ORDER), pc = activeCols(PUT_ORDER);
+  tb.innerHTML = rows.map(r => {
+    const cI = center != null && r.strike < center ? " itm" : "", pI = center != null && r.strike > center ? " itm" : "";
+    const mid = centerMode === "strike" ? r.strike : nfi(r.strike - basis);
+    return `<tr>
+      <td class="side-col${cI}"><div class="side-scroll-box call-side-scroll"><div class="side-inner">${cc.map(k => sideCell(k, "C", r, ctx)).join("")}</div></div></td>
+      <td class="center-col${r.strike === atm ? " atm-strike" : ""}" title="點擊切換 履約價 / 參考價">${mid}</td>
+      <td class="side-col${pI}"><div class="side-scroll-box put-side-scroll"><div class="side-inner">${pc.map(k => sideCell(k, "P", r, ctx)).join("")}</div></div></td></tr>`;
+  }).join("");
+  renderSum(cc, pc, d); renderCombo(d);
+  bindScroll();
+  setScroll("call", sc.call); setScroll("put", sc.put);
+}
+
+/* 橫向捲動：買權所有履約價綁在一起、賣權所有履約價綁在一起（兩邊各自獨立，不再鏡射） */
+function scrollGroup(side) {
+  return [$(side + "-header-scroll"), ...document.querySelectorAll("." + side + "-side-scroll")];
+}
+function setScroll(side, x) { scrollGroup(side).forEach(el => { if (el.scrollLeft !== x) el.scrollLeft = x; }); }
+function bindScroll() {
+  for (const side of ["call", "put"]) {
+    scrollGroup(side).forEach(el => { el.onscroll = () => setScroll(side, el.scrollLeft); });
+  }
+}
+function stepScroll(dir, side) { setScroll(side, $(side + "-header-scroll").scrollLeft + dir * 90); }
+
+function toggleCenter() {
+  centerMode = centerMode === "strike" ? "ref" : "strike";
+  $("center-th-text").textContent = centerMode === "strike" ? "履約價" : "參考價";
+  renderChain();
+}
+$("center-th").addEventListener("click", toggleCenter);
+$("tbody").addEventListener("click", ev => {
+  const t = ev.target.closest(".tap");
+  if (t) { openBook(t.dataset.sym, futMode === "night", `${t.dataset.t}　${t.dataset.sym}`); return; }
+  if (ev.target.closest(".center-col")) toggleCenter();
+});
+
+/* ---------- 五檔 ---------- */
+let book = null, bookTimer = null;
+function openBook(sym, ah, title) {
+  if (!sym) return;
+  book = { sym, ah };
+  $("book-title").textContent = title;
+  $("book-body").innerHTML = `<div class="book-wait">載入中…</div>`;
+  $("book-mask").style.display = "flex";
+  clearInterval(bookTimer); pollBook(); bookTimer = setInterval(pollBook, 1000);
+}
+function closeBook() { book = null; clearInterval(bookTimer); $("book-mask").style.display = "none"; }
+$("book-mask").addEventListener("click", ev => { if (ev.target.id === "book-mask") closeBook(); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeBook(); });
+
+async function pollBook() {
+  const b = book; if (!b) return;
+  try {
+    const d = await (await fetch(`/api/book?symbol=${encodeURIComponent(b.sym)}&ah=${b.ah ? 1 : 0}`)).json();
+    if (book === b) renderBook(d);
+  } catch (e) { if (book === b) $("book-body").innerHTML = `<div class="book-wait">讀取失敗：${esc(e.message)}</div>`; }
+}
+function renderBook(d) {
+  const box = $("book-body");
+  if (!d.ok) { box.innerHTML = `<div class="book-wait">${esc(d.error || "查詢失敗")}</div>`; return; }
+  if (d.waiting) {
+    box.innerHTML = `<div class="book-wait">已訂閱五檔，等待委託簿資料…<br>（委託簿有變動才會推送）${d.connected === false ? "<br>WebSocket 尚未連線" : ""}${d.error ? "<br>" + esc(d.error) : ""}</div>`;
+    return;
+  }
+  const bids = d.bids || [], asks = d.asks || [];
+  const mx = Math.max(1, ...bids.map(x => x.size || 0), ...asks.map(x => x.size || 0));
+  const cell = (x, k, side) => x ? (k === "sz"
+    ? `<td class="${side}"><i style="width:${(x.size / mx * 100).toFixed(0)}%"></i><b>${nfi(x.size)}</b></td>`
+    : `<td class="px ${side}">${nf(x.price)}</td>`) : `<td class="${k === "px" ? "px " : ""}${side}">--</td>`;
+  let rows = "";
+  for (let i = 0; i < 5; i++) rows += `<tr>${cell(bids[i], "sz", "bid")}${cell(bids[i], "px", "bid")}${cell(asks[i], "px", "ask")}${cell(asks[i], "sz", "ask")}</tr>`;
+  const sb = bids.reduce((a, x) => a + (x.size || 0), 0), sa = asks.reduce((a, x) => a + (x.size || 0), 0);
+  rows += `<tr class="tot"><td class="bid">${nfi(sb)}</td><td class="px">合計</td><td class="px"></td><td class="ask">${nfi(sa)}</td></tr>`;
+  const note = d.trial ? "試撮中，顯示的不是正式委託簿" : d.age > 30 ? `已 ${nfi(d.age)} 秒沒有變動` : `${nf(d.age, 1)} 秒前更新`;
+  box.innerHTML = `<table class="book-tbl"><tr><th>委買量</th><th>買價</th><th>賣價</th><th>委賣量</th></tr>${rows}</table><div class="book-note">${note}</div>`;
+}
+
+let chainBusy = null;
+const chainAh = () => futMode === "night" ? 1 : 0;      // 選擇權鏈跟著台指期的日盤 / 夜盤
+let chainWant = "day";
+const chainKey = () => `${selected}|${strikeCfg.mode === "all" ? "all" : strikeCfg.n}|${accScope}|${chainAh()}`;
+function resetChain() { lastChain = null; renderChain(); renderOptInfo(); refreshChain(); }
+async function refreshChain() {
+  if (!selected) return;
+  const id = selected, key = chainKey();
+  if (chainBusy === key) return;            // 「全部履約價」較慢，上一次還沒回來就不重複送
+  chainBusy = key;
+  try {
+    const win = strikeCfg.mode === "all" ? "all" : strikeCfg.n;
+    const d = await (await fetch(`/api/chain?expiry=${encodeURIComponent(id)}&win=${win}&acc=${accScope}&ah=${chainAh()}`)).json();
+    if (key !== chainKey() || d.needLogin) return;
+    if (!d.ok) { $("warn").textContent = d.error || "查詢失敗"; return; }
+    lastChain = d; renderChain(); renderOptInfo();
+  } catch (e) { $("warn").textContent = "選擇權鏈載入失敗：" + e.message; }
+  finally { if (chainBusy === key) chainBusy = null; }
+}
+
+/* ---------- 分頁 ---------- */
+let page = "opt";
+function setPage(p) {
+  page = p;
+  $("page-opt").style.display = p === "opt" ? "" : "none";
+  $("page-fut").style.display = p === "fut" ? "" : "none";
+  $("page-watch").style.display = p === "watch" ? "" : "none";
+  $("tab-opt").classList.toggle("on", p === "opt"); $("tab-fut").classList.toggle("on", p === "fut"); $("tab-watch").classList.toggle("on", p === "watch");
+  window.scrollTo(0, 0);
+  if (p === "fut") startChart(); else stopChart();
+  if (p === "watch") startWatch(); else stopWatch();
+}
+
+
+/* ---------- 自選股 ---------- */
+let wlList = ["IX0001", "2330", "TXF1!"], wlEdit = false, wlTimer = null, wlItems = [];
+try { const s = JSON.parse(localStorage.getItem("wlList") || "null"); if (Array.isArray(s)) wlList = s; } catch (e) {}
+const wlSave = () => { try { localStorage.setItem("wlList", JSON.stringify(wlList)); } catch (e) {} };
+
+function wlRow(x) {
+  if (!x.ok) return `<div class="wl-row"><div class="wl-n">${wlEdit ? `<button data-del="${esc(x.symbol)}">✕</button>` : ""}${esc(x.symbol)}</div><div class="wl-err">${esc(x.error || "查詢失敗")}</div></div>`;
+  const c = x.change ?? 0, k = cls(c), arrow = c > 0 ? "▲" : c < 0 ? "▼" : "";
+  const col = c > 0 ? "var(--red-down)" : c < 0 ? "var(--green-up)" : "#848e9c";
+  let bar = "";
+  const lo = x.low, hi = x.high, pc = x.previousClose, p = x.price;
+  if (lo != null && hi != null && hi > lo && p != null) {
+    const pos = v => Math.min(100, Math.max(0, (v - lo) / (hi - lo) * 100));
+    const a = pos(pc ?? p), b = pos(p);
+    bar = `<div class="wl-bar"><i style="left:${Math.min(a, b)}%;width:${Math.abs(a - b)}%;background:${col}"></i><b style="left:${b}%"></b></div>`;
+  } else bar = `<div class="wl-bar"></div>`;
+  return `<div class="wl-row">
+    <div class="wl-n">${wlEdit ? `<button data-del="${esc(x.symbol)}">✕</button>` : ""}<span>${esc(x.name || x.symbol)}</span></div>
+    <div class="wl-p ${k}">${nf(x.price)}</div>
+    <div class="wl-c ${k}">${arrow}${nf(Math.abs(c))}</div>
+    <div class="wl-r ${k}">${sg(c)}${nf(x.changePercent ?? 0)}</div>
+    <div class="wl-s">${esc(x.symbol)}</div>${bar}</div>`;
+}
+function renderWatch() {
+  $("wl-list").innerHTML = wlList.length
+    ? wlItems.map(wlRow).join("") || `<div class="wl-empty">載入中…</div>`
+    : `<div class="wl-empty">尚未加入商品，請在上方輸入代碼</div>`;
+  $("wl-edit").classList.toggle("on", wlEdit); $("wl-edit").textContent = wlEdit ? "完成" : "編輯";
+}
+async function loadWatch() {
+  if (!wlList.length) { wlItems = []; renderWatch(); return; }
+  try {
+    const d = await (await fetch("/api/watch?symbols=" + encodeURIComponent(wlList.join(",")))).json();
+    const m = Object.fromEntries((d.items || []).map(x => [x.symbol, x]));
+    wlItems = wlList.map(s => m[s] || { ok: false, symbol: s, error: "無資料" });
+    $("wl-upd").textContent = d.serverTime || "";
+    renderWatch();
+  } catch (e) { $("wl-upd").textContent = "讀取失敗"; }
+}
+function startWatch() { renderWatch(); loadWatch(); clearInterval(wlTimer); wlTimer = setInterval(loadWatch, 5000); }
+function stopWatch() { clearInterval(wlTimer); }
+function wlAdd() {
+  const s = $("wl-input").value.trim().toUpperCase();
+  if (!/^[A-Z0-9*!]{2,16}$/.test(s)) { $("wl-input").value = ""; return; }
+  if (!wlList.includes(s)) { wlList.push(s); wlSave(); loadWatch(); }
+  $("wl-input").value = "";
+}
+$("wl-add").addEventListener("click", wlAdd);
+$("wl-input").addEventListener("keydown", ev => { if (ev.key === "Enter") wlAdd(); });
+$("wl-edit").addEventListener("click", () => { wlEdit = !wlEdit; renderWatch(); });
+$("wl-list").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-del]"); if (!b) return;
+  wlList = wlList.filter(s => s !== b.dataset.del); wlItems = wlItems.filter(x => x.symbol !== b.dataset.del); wlSave(); renderWatch();
+});
+
+function renderFutHead() {
+  const f = curFut(), pr = $("fh-price");
+  if (!f || !f.ok) { pr.textContent = "--"; $("fh-chg").textContent = ""; return; }
+  const c = f.change ?? 0, k = cls(c);
+  pr.className = `market-price ${k}`; pr.textContent = nfi(f.price);
+  $("fh-chg").className = `market-change ${k}`;
+  $("fh-chg").textContent = `${sg(c)}${nf(c, 0)} (${sg(c)}${nf(Math.abs(f.changePercent ?? 0))}%)`;
+  $("fh-sym").textContent = `${f.symbol}・${f.session}`;
+}
+
+/* ---------- K 線圖（TradingView Lightweight Charts） ---------- */
+let chart = null, cSeries = null, vSeries = null, chartTf = "15", chartSess = null, chartTimer = null, bars = [], libP = null;
+const LIBS = ["https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js",
+              "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"];
+function loadLib() {
+  if (window.LightweightCharts) return Promise.resolve();
+  return libP ||= new Promise((ok, no) => {
+    let i = 0;
+    const next = () => {
+      if (i >= LIBS.length) { libP = null; return no(new Error("無法載入圖表函式庫（請確認網路）")); }
+      const s = document.createElement("script"); s.src = LIBS[i++]; s.onload = ok; s.onerror = next; document.head.appendChild(s);
+    };
+    next();
+  });
+}
+
+const p2 = n => String(n).padStart(2, "0");
+function fmtT(t) {            // yyyy-mm-dd HH:mm（時間戳已先加 8 小時，故用 UTC 方法讀取）
+  if (typeof t === "string") return t;
+  if (typeof t === "object") return `${t.year}-${p2(t.month)}-${p2(t.day)}`;
+  const d = new Date(t * 1000);
+  return `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+}
+
+function initChart() {
+  if (chart) return;
+  const el = $("chart");
+  chart = LightweightCharts.createChart(el, {
+    width: el.clientWidth, height: el.clientHeight,
+    layout: { background: { color: "#131722" }, textColor: "#b2b5be" },
+    grid: { vertLines: { color: "#1e222d" }, horzLines: { color: "#1e222d" } },
+    crosshair: { mode: 0 },
+    rightPriceScale: { borderColor: "#2a2e39" },
+    localization: { timeFormatter: fmtT },
+    timeScale: { borderColor: "#2a2e39", timeVisible: true, secondsVisible: false, rightOffset: 4, tickMarkFormatter: t => typeof t === "number" ? fmtT(t).slice(11) : fmtT(t) },
+  });
+  cSeries = chart.addCandlestickSeries({
+    upColor: "#f6465d", downColor: "#00c076", borderUpColor: "#f6465d", borderDownColor: "#00c076",
+    wickUpColor: "#f6465d", wickDownColor: "#00c076", priceFormat: { type: "price", precision: 0, minMove: 1 } });
+  vSeries = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol" });
+  chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  chart.subscribeCrosshairMove(p => {
+    const c = p.seriesData && p.seriesData.get(cSeries), v = p.seriesData && p.seriesData.get(vSeries);
+    if (c) legend(c, v ? v.value : null); else if (bars.length) { const b = bars[bars.length - 1]; legend({ open: b.o, high: b.h, low: b.l, close: b.c }, b.v); }
+  });
+  new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })).observe(el);
+  syncInd();
+}
+
+function legend(c, v) {
+  const k = c.close >= c.open ? "up-text" : "down-text";
+  $("chart-legend").innerHTML = `<span>O <b class="${k}">${nfi(c.open)}</b></span><span>H <b class="${k}">${nfi(c.high)}</b></span>
+    <span>L <b class="${k}">${nfi(c.low)}</b></span><span>C <b class="${k}">${nfi(c.close)}</b></span>
+    <span class="${k}">${sg(c.close - c.open)}${nfi(c.close - c.open)}</span>${v != null ? `<span>量 <b style="color:#fff">${nfi(v)}</b></span>` : ""}`;
+}
+
+function syncToolbar() {
+  document.querySelectorAll("#chart-toolbar button").forEach(b =>
+    b.classList.toggle("on", b.dataset.tf === chartTf || b.dataset.sess === chartSess));
+}
+$("chart-toolbar").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b || (!b.dataset.tf && !b.dataset.sess)) return;
+  if (b.dataset.tf) chartTf = b.dataset.tf; else chartSess = b.dataset.sess;
+  syncToolbar(); bars = []; loadCandles(true);
+});
+
+
+/* ---------- 內建指標（indicators/*.js） ---------- */
+let indState = {};
+try { indState = JSON.parse(localStorage.getItem("indOn") || "{}"); } catch (e) {}
+const indInst = {};
+const indOn = d => indState[d.id] ?? d.on;
+const fbCache = {};
+async function fetchBars(tf, sess) {
+  const key = tf + "|" + sess, c = fbCache[key];
+  if (c && Date.now() - c.ts < 8000) return c.bars;
+  const d = await (await fetch(`/api/candles?tf=${tf}&session=${sess}`)).json();
+  if (!d.ok) throw new Error(d.error || "查詢失敗");
+  fbCache[key] = { ts: Date.now(), bars: d.candles };
+  return d.candles;
+}
+function syncInd() {
+  if (!chart || !window.TXI) return;
+  for (const d of TXI.defs) {
+    if (indOn(d) && !indInst[d.id]) { try { indInst[d.id] = d.create(chart); } catch (e) { console.warn(d.id, e); } }
+    else if (!indOn(d) && indInst[d.id]) { indInst[d.id].destroy(); delete indInst[d.id]; }
+  }
+  const band = TXI.defs.some(d => d.bottomBand && indInst[d.id]);          // 有下方色帶時，K線區往上讓出空間
+  chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.06, bottom: band ? 0.26 : 0.2 } });
+}
+async function runInd(keepRange) {
+  if (!chart || !window.TXI) return;
+  const r = keepRange ? chart.timeScale().getVisibleLogicalRange() : null;     // 即時更新時保留捲動位置
+  const ctx = { tf: chartTf, sess: chartSess, fetchBars };
+  await Promise.all(Object.values(indInst).map(i => Promise.resolve().then(() => i.update(bars, ctx)).catch(e => console.warn(e))));
+  if (r) chart.timeScale().setVisibleLogicalRange(r);
+}
+function renderIndPanel() {
+  $("ind-panel").innerHTML = (window.TXI ? TXI.defs : []).map(d =>
+    `<label><input type="checkbox" data-id="${esc(d.id)}" ${indOn(d) ? "checked" : ""}>${esc(d.name)}</label>`).join("");
+}
+$("ind-btn").addEventListener("click", ev => { ev.stopPropagation(); $("ind-panel").classList.toggle("open"); });
+document.addEventListener("click", ev => { if (!ev.target.closest(".ind-wrap")) $("ind-panel").classList.remove("open"); });
+$("ind-panel").addEventListener("change", ev => {
+  const id = ev.target.dataset.id; if (!id) return;
+  indState[id] = ev.target.checked;
+  try { localStorage.setItem("indOn", JSON.stringify(indState)); } catch (e) {}
+  syncInd(); runInd(true);
+});
+renderIndPanel();
+
+async function startChart() {
+  if (!chartSess) chartSess = futMode === "night" ? "afterhours" : "regular";
+  syncToolbar();
+  try { await loadLib(); } catch (e) { $("chart-msg").textContent = e.message; return; }
+  if (page !== "fut") return;
+  initChart();
+  chart.applyOptions({ width: $("chart").clientWidth, height: $("chart").clientHeight });
+  loadCandles(true);
+  clearInterval(chartTimer); chartTimer = setInterval(() => loadCandles(false), 10000);
+}
+function stopChart() { clearInterval(chartTimer); }
+
+async function loadCandles(fit) {
+  const key = chartTf + chartSess;
+  try {
+    const d = await (await fetch(`/api/candles?tf=${chartTf}&session=${chartSess}`)).json();
+    if (key !== chartTf + chartSess) return;
+    if (!d.ok) { $("chart-msg").textContent = d.error || "查詢失敗"; return; }
+    const nb = d.candles, prev = bars.length;
+    $("chart-msg").textContent = nb.length ? "" : "查無資料（非交易時段，或此區間沒有 K 線）";
+    const vc = b => b.c >= b.o ? "rgba(246,70,93,.45)" : "rgba(0,192,118,.45)";
+    if (!fit && prev && nb.length >= prev && nb.length - prev <= 1) {      // 即時更新：只更新最後兩根，保留目前的捲動位置
+      for (const b of nb.slice(-2)) {
+        cSeries.update({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c });
+        vSeries.update({ time: b.t, value: b.v, color: vc(b) });
+      }
+    } else {
+      cSeries.setData(nb.map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c })));
+      vSeries.setData(nb.map(b => ({ time: b.t, value: b.v, color: vc(b) })));
+      if (fit && nb.length) { const n = nb.length; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 90), to: n + 4 }); }
+    }
+    bars = nb;
+    if (nb.length) { const b = nb[nb.length - 1]; legend({ open: b.o, high: b.h, low: b.l, close: b.c }, b.v); }
+    runInd(!fit);
+  } catch (e) { $("chart-msg").textContent = "K 線載入失敗：" + e.message; }
+}
+
+setInterval(() => { const n = new Date(), p = v => String(v).padStart(2, "0"); $("top-clock").textContent = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`; }, 1000);
+let booted = false;
+function boot() {                      // 登入成功（或伺服器已登入）後才開始輪詢
+  refreshQuotes(); loadExpiries();
+  if (booted) return; booted = true;
+  setInterval(refreshQuotes, 5000);
+  setInterval(refreshChain, 15000);
+  setInterval(loadExpiries, 10 * 60 * 1000);
+}
+(async () => {
+  try { const d = await (await _rawFetch("/api/status")).json(); envAvail = !!d.envLogin; setEnvBtn(); if (d.loggedIn) boot(); else { showLogin(); tryAutoLogin(); } }
+  catch (e) { showLogin("無法連線伺服器：" + e.message); }
+})();
+</script>
+</body>
+</html>
